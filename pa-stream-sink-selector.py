@@ -105,8 +105,9 @@ class AppIndicatorExample:
             print "%s: %s\n" % (appName, mediaName)
             if("Chromium" in appName):
                 print "Found Chromium"
-                iface = dbus.Interface(s, 'org.PulseAudio.Core1.Stream')
-                iface.Move("/org/pulseaudio/core1/sink1")
+                # Move source
+                #iface = dbus.Interface(s, 'org.PulseAudio.Core1.Stream')
+                #iface.Move("/org/pulseaudio/core1/sink1")
                 propertyList = s.Get("org.PulseAudio.Core1.Stream", "PropertyList", dbus_interface="org.freedesktop.DBus.Properties")
         #card1 = self.conn.get_object(object_path="/org/pulseaudio/core1/card1")
         #print card1.Get("org.PulseAudio.Core1.Card", "Name", dbus_interface="org.freedesktop.DBus.Properties")
