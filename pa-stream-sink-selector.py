@@ -6,11 +6,11 @@ from subprocess import call,  check_call
 
 class AppIndicatorExample:
     def connect(self):
-        #if call('pactl list modules short | grep module-dbus-protocol', shell=True) == 1:
-        #    print('[WARNING] loading module-dbus-protocol into PA')
-        #    check_call(['pactl', 'load-module', 'module-dbus-protocol'])
-        #else:
-        #    print('[INFO] dbus-module was already loaded')
+        if call('pactl list modules short | grep module-dbus-protocol', shell=True) == 1:
+            print('[WARNING] loading module-dbus-protocol into PA')
+            check_call(['pactl', 'load-module', 'module-dbus-protocol'])
+        else:
+            print('[INFO] dbus-module was already loaded')
         if 'PULSE_DBUS_SERVER' in os.environ:
             address = os.environ['PULSE_DBUS_SERVER']
         else:
