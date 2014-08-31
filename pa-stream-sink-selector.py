@@ -13,7 +13,7 @@ from subprocess import call, check_call
 
 class AppIndicatorExample:
 
-    def connect(self, dbgml):
+    def connect(self):
         if call('pactl list modules short | grep module-dbus-protocol',
                 shell=True) == 1:
             print '[WARNING] loading module-dbus-protocol into PA'
@@ -23,15 +23,15 @@ class AppIndicatorExample:
         if 'PULSE_DBUS_SERVER' in os.environ:
             address = os.environ['PULSE_DBUS_SERVER']
         else:
-            bus = dbus.SessionBus(dbgml)
-            server_lookup = bus.get_object('org.PulseAudio1',
+            self.bus = dbus.SessionBus()
+            server_lookup = self.bus.get_object('org.PulseAudio1',
                     '/org/pulseaudio/server_lookup1')
             address = server_lookup.Get('org.PulseAudio.ServerLookup1',
                     'Address',
                     dbus_interface='org.freedesktop.DBus.Properties')
         return dbus.connection.Connection(address)
 
-    def __init__(self, dbgml, loop):
+    def __init__(self, loop):
         self.loop = loop
         self.ind = appindicator.Indicator('example-simple-client',
                 'indicator-messages',
@@ -40,28 +40,23 @@ class AppIndicatorExample:
         self.ind.set_attention_icon('indicator-messages-new')
         self.ind.set_icon('distributor-logo')
         try:
-            self.conn = self.connect(dbgml)
+            self.conn = self.connect()
             self.conn.call_on_disconnection(self.handler)
             self.core = \
                 self.conn.get_object(object_path='/org/pulseaudio/core1'
                     )
-            print 'Successfully connected to ' \
-                + self.core.Get('org.PulseAudio.Core1', 'Name',
-                                dbus_interface='org.freedesktop.DBus.Properties'
-                                ) + '!'
         except dbus.exceptions.DBusException, err:
             print err
             raise
 
-        #s = self.conn.get_object(object_path='/org/pulseaudio/core1')
-        core1iface = dbus.Interface(self.core, 'org.PulseAudio.Core1')
-        core1iface.connect_to_signal("NewPlaybackStream", self.handler, sender_keyword='sender')
-        core1iface.connect_to_signal("PlaybackStreamRemoved", self.handler, sender_keyword='sender')
-        core1iface.connect_to_signal("NewSource", self.handler, sender_keyword='sender')
-        core1iface.connect_to_signal("SourceRemoved", self.handler, sender_keyword='sender')
-        # interface.Move("/org/pulseaudio/core1/sink1")
-        #!NewPlaybackStream
-        #!PlaybackStreamRemoved
+        for sig_name, sig_handler in (
+                ('NewSink', self.handler),
+                ('SinkRemoved', self.handler),
+                ('NewPlaybackStream', self.handler),
+                ('PlaybackStreamRemoved', self.handler)):
+            print self.core.ListenForSignal('org.PulseAudio.Core1.{}'
+                .format(sig_name), dbus.Array(signature='o'))
+            print self.conn.add_signal_receiver(sig_handler, signal_name=sig_name, member_keyword='member')
 
         self.menu = gtk.Menu()  # create a menu
 
@@ -170,17 +165,14 @@ class AppIndicatorExample:
     def action3(self, widget, data=None):
         print 'action3: %s', widget
 
-    def handler(self, sender=None):
-        print "got signal from %r" % sender
+    def handler(self, sender=None, member=None):
+        print "got signal from %s, message %s" % (sender, member)
 
 def main():
-    #indicator = AppIndicatorExample()
-    dbgml = DBusGMainLoop(set_as_default=True)
-    ##loop = gobject.MainLoop()
-    myservice = AppIndicatorExample(dbgml, dbgml)
-    dbgml.run()
-    #loop.run()
-    #gtk.main()
+    DBusGMainLoop(set_as_default=True)
+    loop = gobject.MainLoop()
+    AppIndicatorExample(loop)
+    loop.run()
     return 0
 
 
