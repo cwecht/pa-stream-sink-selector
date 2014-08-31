@@ -2,16 +2,18 @@
 # -*- coding: utf-8 -*-
 
 import gtk
+import gobject
 import appindicator
 import os
 import sys
 import dbus
+from dbus.mainloop.glib import DBusGMainLoop
 from subprocess import call, check_call
 
 
 class AppIndicatorExample:
 
-    def connect(self):
+    def connect(self, dbgml):
         if call('pactl list modules short | grep module-dbus-protocol',
                 shell=True) == 1:
             print '[WARNING] loading module-dbus-protocol into PA'
@@ -21,7 +23,7 @@ class AppIndicatorExample:
         if 'PULSE_DBUS_SERVER' in os.environ:
             address = os.environ['PULSE_DBUS_SERVER']
         else:
-            bus = dbus.SessionBus()
+            bus = dbus.SessionBus(dbgml)
             server_lookup = bus.get_object('org.PulseAudio1',
                     '/org/pulseaudio/server_lookup1')
             address = server_lookup.Get('org.PulseAudio.ServerLookup1',
@@ -29,7 +31,8 @@ class AppIndicatorExample:
                     dbus_interface='org.freedesktop.DBus.Properties')
         return dbus.connection.Connection(address)
 
-    def __init__(self):
+    def __init__(self, dbgml, loop):
+        self.loop = loop
         self.ind = appindicator.Indicator('example-simple-client',
                 'indicator-messages',
                 appindicator.CATEGORY_APPLICATION_STATUS)
@@ -37,7 +40,8 @@ class AppIndicatorExample:
         self.ind.set_attention_icon('indicator-messages-new')
         self.ind.set_icon('distributor-logo')
         try:
-            self.conn = self.connect()
+            self.conn = self.connect(dbgml)
+            self.conn.call_on_disconnection(self.handler)
             self.core = \
                 self.conn.get_object(object_path='/org/pulseaudio/core1'
                     )
@@ -48,6 +52,16 @@ class AppIndicatorExample:
         except dbus.exceptions.DBusException, err:
             print err
             raise
+
+        #s = self.conn.get_object(object_path='/org/pulseaudio/core1')
+        core1iface = dbus.Interface(self.core, 'org.PulseAudio.Core1')
+        core1iface.connect_to_signal("NewPlaybackStream", self.handler, sender_keyword='sender')
+        core1iface.connect_to_signal("PlaybackStreamRemoved", self.handler, sender_keyword='sender')
+        core1iface.connect_to_signal("NewSource", self.handler, sender_keyword='sender')
+        core1iface.connect_to_signal("SourceRemoved", self.handler, sender_keyword='sender')
+        # interface.Move("/org/pulseaudio/core1/sink1")
+        #!NewPlaybackStream
+        #!PlaybackStreamRemoved
 
         self.menu = gtk.Menu()  # create a menu
 
@@ -88,7 +102,8 @@ class AppIndicatorExample:
         self.ind.set_menu(self.menu)
 
     def quit(self, widget, data=None):
-        gtk.main_quit()
+        #gtk.main_quit()
+        self.loop.quit()
 
     def action(self):
         print 'SINKS:'
@@ -133,17 +148,18 @@ class AppIndicatorExample:
             mediaName = ''.join([chr(character) for character in
                                 propertyList['media.name']])[:-1]
             print '%s: %s\n' % (appName, mediaName)
-            if 'Chromium' in appName:
-                print 'Found Chromium'
+            #if 'Chromium' in appName:
+            #    print 'Found Chromium'
 
                 # Move source
-                # interface = dbus.Interface(s, 'org.PulseAudio.Core1.Stream')
-                # interface.Move("/org/pulseaudio/core1/sink1")
+                #interface = dbus.Interface(s, 'org.PulseAudio.Core1.Stream')
+                #interface.Move("/org/pulseaudio/core1/sink1")
 
-                propertyList = s.Get('org.PulseAudio.Core1.Stream',
-                        'PropertyList',
-                        dbus_interface='org.freedesktop.DBus.Properties'
-                        )
+                #propertyList = s.Get('org.PulseAudio.Core1.Stream',
+                #        'PropertyList',
+                #        dbus_interface='org.freedesktop.DBus.Properties'
+                #        )
+            print "Action1 finished"
 
     def action1(self, widget, data=None):
         self.action()
@@ -154,12 +170,19 @@ class AppIndicatorExample:
     def action3(self, widget, data=None):
         print 'action3: %s', widget
 
+    def handler(self, sender=None):
+        print "got signal from %r" % sender
 
 def main():
-    gtk.main()
+    #indicator = AppIndicatorExample()
+    dbgml = DBusGMainLoop(set_as_default=True)
+    ##loop = gobject.MainLoop()
+    myservice = AppIndicatorExample(dbgml, dbgml)
+    dbgml.run()
+    #loop.run()
+    #gtk.main()
     return 0
 
 
 if __name__ == '__main__':
-    indicator = AppIndicatorExample()
     main()
