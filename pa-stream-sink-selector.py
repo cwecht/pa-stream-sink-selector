@@ -53,7 +53,6 @@ class AppIndicatorExample:
         self.ind.set_icon(gtk.STOCK_INFO)
         try:
             self.conn = self.connect()
-            self.conn.call_on_disconnection(self.handler)
             self.core = \
                 self.conn.get_object(object_path='/org/pulseaudio/core1'
                     )
@@ -71,37 +70,10 @@ class AppIndicatorExample:
             print self.conn.add_signal_receiver(sig_handler, signal_name=sig_name, member_keyword='member')
 
         self.menu = gtk.Menu()  # create a menu
-
-        # create items for the menu - labels, checkboxes, radio buttons and images are supported:
-
-        #item = gtk.MenuItem('Regular Menu Item')
-        #item.connect('activate', self.action1)
-        #item.show()
-        #self.menu.append(item)
-
-        #filem = gtk.MenuItem('Open submenu')
-
-        #filemenu = gtk.Menu()
-
-        #check = gtk.MenuItem('Action on submenu')
-        #check.connect('activate', self.action2)
-        #check.show()
-        #filemenu.append(check)
-
-        #filemenu.show()
-
-        #filem.set_submenu(filemenu)
-        #filem.show()
-        #self.menu.append(filem)
-
-        #image = gtk.RadioMenuItem(None, "radio 1")
-        #image.connect('activate', self.action3)
-        #image.show()
-        #self.menu.append(image)
         self.makeMenuFromPulseAudio()
+
         quitItem = gtk.ImageMenuItem(gtk.STOCK_QUIT)
         quitItem.connect('activate', self.quit)
-        #image2.set_active(True)
         quitItem.show()
         self.menu.append(quitItem)
 
@@ -110,7 +82,6 @@ class AppIndicatorExample:
         self.ind.set_menu(self.menu)
 
     def quit(self, widget, data=None):
-        #gtk.main_quit()
         self.loop.quit()
 
     def makeMenuFromPulseAudio(self):
