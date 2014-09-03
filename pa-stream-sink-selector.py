@@ -78,12 +78,13 @@ class AppIndicatorExample:
                     signal_name=sig_name, member_keyword='member')
 
         self.menu = gtk.Menu()  # create a menu
-        self.makeMenuFromPulseAudio()
 
         quitItem = gtk.ImageMenuItem(gtk.STOCK_QUIT)
         quitItem.connect('activate', self.quit)
         quitItem.show()
         self.menu.append(quitItem)
+
+        self.makeMenuFromPulseAudio()
 
         self.menu.show()
         self.action()
@@ -138,7 +139,8 @@ class AppIndicatorExample:
                 subMenu.append(radioItem)
             subMenuItem.set_submenu(subMenu)
             subMenuItem.show()
-            self.menu.append(subMenuItem)
+            self.menu.prepend(subMenuItem)
+            #self.menu.append(subMenuItem)
 
     def action(self):
         for pstream in self.core.Get('org.PulseAudio.Core1',
@@ -204,6 +206,10 @@ class AppIndicatorExample:
 
     def dbushandler(self, sender=None, member=None):
         print 'got signal from %s, message %s' % (sender, member)
+        for i in self.menu.get_children(): # This is ugly
+            if isinstance(i, gtk.MenuItem) and i.get_submenu() != None:
+                self.menu.remove(i) # So ugly
+        self.makeMenuFromPulseAudio() # I feel bad
 
 
 def main():
