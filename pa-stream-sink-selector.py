@@ -5,15 +5,23 @@ import gtk
 import gobject
 import appindicator
 import os
-import sys
 import dbus
 from dbus.mainloop.glib import DBusGMainLoop
 from subprocess import call, check_call
 
 
 class SinkRadioMenuItem(gtk.RadioMenuItem):
-    def __init__(self, radioGroup, label, parse_underlines, streamPath, sinkPath):
-        super(SinkRadioMenuItem, self).__init__(radioGroup, label, parse_underlines)
+
+    def __init__(
+        self,
+        radioGroup,
+        label,
+        parse_underlines,
+        streamPath,
+        sinkPath,
+        ):
+        super(SinkRadioMenuItem, self).__init__(radioGroup, label,
+                parse_underlines)
         self.streampath = streamPath
         self.sinkpath = sinkPath
 
@@ -22,6 +30,7 @@ class SinkRadioMenuItem(gtk.RadioMenuItem):
 
     def getsink(self):
         return self.sinkpath
+
 
 class AppIndicatorExample:
 
@@ -60,14 +69,13 @@ class AppIndicatorExample:
             print err
             raise
 
-        for sig_name, sig_handler in (
-                ('NewSink', self.handler),
-                ('SinkRemoved', self.handler),
-                ('NewPlaybackStream', self.handler),
-                ('PlaybackStreamRemoved', self.handler)):
-            print self.core.ListenForSignal('org.PulseAudio.Core1.{}'
-                .format(sig_name), dbus.Array(signature='o'))
-            print self.conn.add_signal_receiver(sig_handler, signal_name=sig_name, member_keyword='member')
+        for (sig_name, sig_handler) in (('NewSink', self.dbushandler),
+                ('SinkRemoved', self.dbushandler), ('NewPlaybackStream',
+                self.dbushandler), ('PlaybackStreamRemoved', self.dbushandler)):
+            print self.core.ListenForSignal('org.PulseAudio.Core1.{}'.format(sig_name),
+                    dbus.Array(signature='o'))
+            print self.conn.add_signal_receiver(sig_handler,
+                    signal_name=sig_name, member_keyword='member')
 
         self.menu = gtk.Menu()  # create a menu
         self.makeMenuFromPulseAudio()
@@ -90,16 +98,15 @@ class AppIndicatorExample:
                 dbus_interface='org.freedesktop.DBus.Properties'):
             s = self.conn.get_object(object_path=pstream)
             streampropertyList = s.Get('org.PulseAudio.Core1.Stream',
-                                 'PropertyList',
-                                 dbus_interface='org.freedesktop.DBus.Properties'
-                                 )
+                    'PropertyList',
+                    dbus_interface='org.freedesktop.DBus.Properties')
             streamsplaybacksink = s.Get('org.PulseAudio.Core1.Stream',
-                                 'Device',
-                                 dbus_interface='org.freedesktop.DBus.Properties'
-                                 )
+                    'Device',
+                    dbus_interface='org.freedesktop.DBus.Properties')
 
             appName = ''.join([chr(character) for character in
-                              streampropertyList['application.name']])[:-1]
+                              streampropertyList['application.name'
+                              ]])[:-1]
             mediaName = ''.join([chr(character) for character in
                                 streampropertyList['media.name']])[:-1]
             streamName = '%s: %s' % (appName, mediaName)
@@ -107,31 +114,26 @@ class AppIndicatorExample:
             subMenuItem = gtk.MenuItem(streamName)
             subMenu = gtk.Menu()
 
-            #print "%s: %s" % (streamName, pstream)
             radioGroup = None
             for sink in self.core.Get('org.PulseAudio.Core1', 'Sinks',
-                                  dbus_interface='org.freedesktop.DBus.Properties'
-                                  ):
+                    dbus_interface='org.freedesktop.DBus.Properties'):
 
                 s = self.conn.get_object(object_path=sink)
-                #sinkName = s.Get('org.PulseAudio.Core1.Device', 'Name',
-                #            dbus_interface='org.freedesktop.DBus.Properties')
                 sinkpropertyList = s.Get('org.PulseAudio.Core1.Device',
-                                 'PropertyList',
-                                 dbus_interface='org.freedesktop.DBus.Properties'
-                                 )
-                #print sinkpropertyList
-                #for key in sinkpropertyList:
-                #    print "%s: %s" % (key, ''.join([chr(character) for character in
-                #                sinkpropertyList[key]])[:-1]) :
+                        'PropertyList',
+                        dbus_interface='org.freedesktop.DBus.Properties'
+                        )
+
                 sinkDesc = ''.join([chr(character) for character in
-                                sinkpropertyList['device.description']])[:-1]
-                radioItem = SinkRadioMenuItem(radioGroup, sinkDesc, False, pstream, sink)
+                                   sinkpropertyList['device.description'
+                                   ]])[:-1]
+                radioItem = SinkRadioMenuItem(radioGroup, sinkDesc,
+                        False, pstream, sink)
                 if radioGroup == None:
                     radioGroup = radioItem
                 radioItem.connect('activate', self.sinkPress)
                 radioItem.show()
-                if(sink == streamsplaybacksink):
+                if sink == streamsplaybacksink:
                     radioItem.set_active(True)
                 subMenu.append(radioItem)
             subMenuItem.set_submenu(subMenu)
@@ -142,70 +144,67 @@ class AppIndicatorExample:
         for pstream in self.core.Get('org.PulseAudio.Core1',
                 'PlaybackStreams',
                 dbus_interface='org.freedesktop.DBus.Properties'):
-            #print pstream
+
+            # print pstream
+
             s = self.conn.get_object(object_path=pstream)
             streampropertyList = s.Get('org.PulseAudio.Core1.Stream',
-                                 'PropertyList',
-                                 dbus_interface='org.freedesktop.DBus.Properties'
-                                 )
+                    'PropertyList',
+                    dbus_interface='org.freedesktop.DBus.Properties')
             streamsplaybacksink = s.Get('org.PulseAudio.Core1.Stream',
-                                 'Device',
-                                 dbus_interface='org.freedesktop.DBus.Properties'
-                                 )
+                    'Device',
+                    dbus_interface='org.freedesktop.DBus.Properties')
+
             # print propertyList
-            # [:-1] because the strings contained zero-bytes at the end
+
+            #  [:-1] because the strings contained zero-bytes at the end
 
             appName = ''.join([chr(character) for character in
-                              streampropertyList['application.name']])[:-1]
+                              streampropertyList['application.name'
+                              ]])[:-1]
             mediaName = ''.join([chr(character) for character in
                                 streampropertyList['media.name']])[:-1]
             streamName = '%s: %s' % (appName, mediaName)
-            print "%s: %s" % (streamName, pstream)
+            print '%s: %s' % (streamName, pstream)
             prePend = ' ' * len(streamName)
             for sink in self.core.Get('org.PulseAudio.Core1', 'Sinks',
-                                  dbus_interface='org.freedesktop.DBus.Properties'
-                                  ):
+                    dbus_interface='org.freedesktop.DBus.Properties'):
                 prePend = ' ' * len(streamName)
-                if(sink == streamsplaybacksink):
+                if sink == streamsplaybacksink:
                     prePend = prePend + ' -> '
                 else:
                     prePend = prePend + '    '
 
                 s = self.conn.get_object(object_path=sink)
                 sinkName = s.Get('org.PulseAudio.Core1.Device', 'Name',
-                            dbus_interface='org.freedesktop.DBus.Properties')
-                sinkpropertyList = s.Get('org.PulseAudio.Core1.Device',
-                                 'PropertyList',
                                  dbus_interface='org.freedesktop.DBus.Properties'
                                  )
-                #print sinkpropertyList
+                sinkpropertyList = s.Get('org.PulseAudio.Core1.Device',
+                        'PropertyList',
+                        dbus_interface='org.freedesktop.DBus.Properties'
+                        )
+
+                # print sinkpropertyList
+
                 for key in sinkpropertyList:
-                    print "%s: %s" % (key, ''.join([chr(character) for character in
-                                sinkpropertyList[key]])[:-1])
+                    print '%s: %s' % (key, ''.join([chr(character)
+                            for character in
+                            sinkpropertyList[key]])[:-1])
 
-                print "%s%s (%s)" %(prePend, sinkName, sink)
-
-            #if 'Chromium' in appName:
-            #    print 'Found Chromium'
-
-
+                print '%s%s (%s)' % (prePend, sinkName, sink)
 
     def sinkPress(self, widget, data=None):
-        if isinstance(widget, SinkRadioMenuItem) and widget.get_active():
-            print "Move %s to %s" % (widget.getstream(), widget.getsink())
-            # Move source
+        if isinstance(widget, SinkRadioMenuItem) \
+            and widget.get_active():
+            print 'Move %s to %s' % (widget.getstream(),
+                    widget.getsink())
             s = self.conn.get_object(object_path=widget.getstream())
             interface = dbus.Interface(s, 'org.PulseAudio.Core1.Stream')
             interface.Move(widget.getsink())
 
-    def action2(self, widget, data=None):
-        print 'action2: %s', widget
+    def dbushandler(self, sender=None, member=None):
+        print 'got signal from %s, message %s' % (sender, member)
 
-    def action3(self, widget, data=None):
-        print 'action3: %s', widget
-
-    def handler(self, sender=None, member=None):
-        print "got signal from %s, message %s" % (sender, member)
 
 def main():
     DBusGMainLoop(set_as_default=True)
