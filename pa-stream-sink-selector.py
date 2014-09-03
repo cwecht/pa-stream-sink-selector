@@ -38,7 +38,7 @@ class AppIndicatorExample:
                 appindicator.CATEGORY_APPLICATION_STATUS)
         self.ind.set_status(appindicator.STATUS_ACTIVE)
         self.ind.set_attention_icon('indicator-messages-new')
-        self.ind.set_icon('distributor-logo')
+        self.ind.set_icon(gtk.STOCK_INFO)
         try:
             self.conn = self.connect()
             self.conn.call_on_disconnection(self.handler)
@@ -101,60 +101,56 @@ class AppIndicatorExample:
         self.loop.quit()
 
     def action(self):
-        print 'SINKS:'
-        for sink in self.core.Get('org.PulseAudio.Core1', 'Sinks',
-                                  dbus_interface='org.freedesktop.DBus.Properties'
-                                  ):
-            print sink
-            s = self.conn.get_object(object_path=sink)
-            print s.Get('org.PulseAudio.Core1.Device', 'Name',
-                        dbus_interface='org.freedesktop.DBus.Properties'
-                        )
-
-        print
-        print 'SOURCES:'
-        for source in self.core.Get('org.PulseAudio.Core1', 'Sources',
-                                    dbus_interface='org.freedesktop.DBus.Properties'
-                                    ):
-            print source
-            s = self.conn.get_object(object_path=source)
-            print s.Get('org.PulseAudio.Core1.Device', 'Name',
-                        dbus_interface='org.freedesktop.DBus.Properties'
-                        )
-
-            # print
-
-        print 'PLAYBACKSTREAMS:'
         for pstream in self.core.Get('org.PulseAudio.Core1',
                 'PlaybackStreams',
                 dbus_interface='org.freedesktop.DBus.Properties'):
-            print pstream
+            #print pstream
             s = self.conn.get_object(object_path=pstream)
-            propertyList = s.Get('org.PulseAudio.Core1.Stream',
+            streampropertyList = s.Get('org.PulseAudio.Core1.Stream',
                                  'PropertyList',
                                  dbus_interface='org.freedesktop.DBus.Properties'
                                  )
-
+            streamsplaybacksink = s.Get('org.PulseAudio.Core1.Stream',
+                                 'Device',
+                                 dbus_interface='org.freedesktop.DBus.Properties'
+                                 )
             # print propertyList
             # [:-1] because the strings contained zero-bytes at the end
 
             appName = ''.join([chr(character) for character in
-                              propertyList['application.name']])[:-1]
+                              streampropertyList['application.name']])[:-1]
             mediaName = ''.join([chr(character) for character in
-                                propertyList['media.name']])[:-1]
-            print '%s: %s\n' % (appName, mediaName)
+                                streampropertyList['media.name']])[:-1]
+            streamName = '%s: %s' % (appName, mediaName)
+            print "%s: %s" % (streamName, pstream)
+            prePend = ' ' * len(streamName)
+            for sink in self.core.Get('org.PulseAudio.Core1', 'Sinks',
+                                  dbus_interface='org.freedesktop.DBus.Properties'
+                                  ):
+                prePend = ' ' * len(streamName)
+                if(sink == streamsplaybacksink):
+                    prePend = prePend + ' -> '
+                else:
+                    prePend = prePend + '    '
+
+                s = self.conn.get_object(object_path=sink)
+                sinkName = s.Get('org.PulseAudio.Core1.Device', 'Name',
+                            dbus_interface='org.freedesktop.DBus.Properties')
+                sinkpropertyList = s.Get('org.PulseAudio.Core1.Device',
+                                 'PropertyList',
+                                 dbus_interface='org.freedesktop.DBus.Properties'
+                                 )
+                #print sinkpropertyList
+                for key in sinkpropertyList:
+                    print "%s: %s" % (key, ''.join([chr(character) for character in
+                                sinkpropertyList[key]])[:-1])
+
+                print "%s%s (%s)" %(prePend, sinkName, sink)
+
             #if 'Chromium' in appName:
             #    print 'Found Chromium'
 
-                # Move source
-                #interface = dbus.Interface(s, 'org.PulseAudio.Core1.Stream')
-                #interface.Move("/org/pulseaudio/core1/sink1")
 
-                #propertyList = s.Get('org.PulseAudio.Core1.Stream',
-                #        'PropertyList',
-                #        dbus_interface='org.freedesktop.DBus.Properties'
-                #        )
-            print "Action1 finished"
 
     def action1(self, widget, data=None):
         self.action()
