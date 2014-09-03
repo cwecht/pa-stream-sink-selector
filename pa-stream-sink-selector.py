@@ -62,25 +62,25 @@ class AppIndicatorExample:
 
         # create items for the menu - labels, checkboxes, radio buttons and images are supported:
 
-        item = gtk.MenuItem('Regular Menu Item')
-        item.connect('activate', self.action1)
-        item.show()
-        self.menu.append(item)
+        #item = gtk.MenuItem('Regular Menu Item')
+        #item.connect('activate', self.action1)
+        #item.show()
+        #self.menu.append(item)
 
-        filem = gtk.MenuItem('Open submenu')
+        #filem = gtk.MenuItem('Open submenu')
 
-        filemenu = gtk.Menu()
+        #filemenu = gtk.Menu()
 
-        check = gtk.MenuItem('Action on submenu')
-        check.connect('activate', self.action2)
-        check.show()
-        filemenu.append(check)
+        #check = gtk.MenuItem('Action on submenu')
+        #check.connect('activate', self.action2)
+        #check.show()
+        #filemenu.append(check)
 
-        filemenu.show()
+        #filemenu.show()
 
-        filem.set_submenu(filemenu)
-        filem.show()
-        self.menu.append(filem)
+        #filem.set_submenu(filemenu)
+        #filem.show()
+        #self.menu.append(filem)
 
         image = gtk.ImageMenuItem(gtk.STOCK_REFRESH)
         image.connect('activate', self.action3)
