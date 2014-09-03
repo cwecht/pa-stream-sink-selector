@@ -11,6 +11,18 @@ from dbus.mainloop.glib import DBusGMainLoop
 from subprocess import call, check_call
 
 
+class SinkRadioMenuItem(gtk.RadioMenuItem):
+    def __init__(self, radioGroup, label, parse_underlines, streamPath, sinkPath):
+        super(SinkRadioMenuItem, self).__init__(radioGroup, label, parse_underlines)
+        self.streampath = streamPath
+        self.sinkpath = sinkPath
+
+    def getstream(self):
+        return self.streampath
+
+    def getsink(self):
+        return self.sinkpath
+
 class AppIndicatorExample:
 
     def connect(self):
@@ -82,15 +94,16 @@ class AppIndicatorExample:
         #filem.show()
         #self.menu.append(filem)
 
-        image = gtk.ImageMenuItem(gtk.STOCK_REFRESH)
-        image.connect('activate', self.action3)
-        image.show()
-        self.menu.append(image)
-
-        image2 = gtk.ImageMenuItem(gtk.STOCK_QUIT)
-        image2.connect('activate', self.quit)
-        image2.show()
-        self.menu.append(image2)
+        #image = gtk.RadioMenuItem(None, "radio 1")
+        #image.connect('activate', self.action3)
+        #image.show()
+        #self.menu.append(image)
+        self.makeMenuFromPulseAudio()
+        quitItem = gtk.ImageMenuItem(gtk.STOCK_QUIT)
+        quitItem.connect('activate', self.quit)
+        #image2.set_active(True)
+        quitItem.show()
+        self.menu.append(quitItem)
 
         self.menu.show()
         self.action()
@@ -99,6 +112,60 @@ class AppIndicatorExample:
     def quit(self, widget, data=None):
         #gtk.main_quit()
         self.loop.quit()
+
+    def makeMenuFromPulseAudio(self):
+        for pstream in self.core.Get('org.PulseAudio.Core1',
+                'PlaybackStreams',
+                dbus_interface='org.freedesktop.DBus.Properties'):
+            s = self.conn.get_object(object_path=pstream)
+            streampropertyList = s.Get('org.PulseAudio.Core1.Stream',
+                                 'PropertyList',
+                                 dbus_interface='org.freedesktop.DBus.Properties'
+                                 )
+            streamsplaybacksink = s.Get('org.PulseAudio.Core1.Stream',
+                                 'Device',
+                                 dbus_interface='org.freedesktop.DBus.Properties'
+                                 )
+
+            appName = ''.join([chr(character) for character in
+                              streampropertyList['application.name']])[:-1]
+            mediaName = ''.join([chr(character) for character in
+                                streampropertyList['media.name']])[:-1]
+            streamName = '%s: %s' % (appName, mediaName)
+
+            subMenuItem = gtk.MenuItem(streamName)
+            subMenu = gtk.Menu()
+
+            #print "%s: %s" % (streamName, pstream)
+            radioGroup = None
+            for sink in self.core.Get('org.PulseAudio.Core1', 'Sinks',
+                                  dbus_interface='org.freedesktop.DBus.Properties'
+                                  ):
+
+                s = self.conn.get_object(object_path=sink)
+                #sinkName = s.Get('org.PulseAudio.Core1.Device', 'Name',
+                #            dbus_interface='org.freedesktop.DBus.Properties')
+                sinkpropertyList = s.Get('org.PulseAudio.Core1.Device',
+                                 'PropertyList',
+                                 dbus_interface='org.freedesktop.DBus.Properties'
+                                 )
+                #print sinkpropertyList
+                #for key in sinkpropertyList:
+                #    print "%s: %s" % (key, ''.join([chr(character) for character in
+                #                sinkpropertyList[key]])[:-1]) :
+                sinkDesc = ''.join([chr(character) for character in
+                                sinkpropertyList['device.description']])[:-1]
+                radioItem = SinkRadioMenuItem(radioGroup, sinkDesc, False, pstream, sink)
+                if radioGroup == None:
+                    radioGroup = radioItem
+                radioItem.connect('activate', self.sinkPress)
+                radioItem.show()
+                if(sink == streamsplaybacksink):
+                    radioItem.set_active(True)
+                subMenu.append(radioItem)
+            subMenuItem.set_submenu(subMenu)
+            subMenuItem.show()
+            self.menu.append(subMenuItem)
 
     def action(self):
         for pstream in self.core.Get('org.PulseAudio.Core1',
@@ -152,8 +219,13 @@ class AppIndicatorExample:
 
 
 
-    def action1(self, widget, data=None):
-        self.action()
+    def sinkPress(self, widget, data=None):
+        if isinstance(widget, SinkRadioMenuItem) and widget.get_active():
+            print "Move %s to %s" % (widget.getstream(), widget.getsink())
+            # Move source
+            s = self.conn.get_object(object_path=widget.getstream())
+            interface = dbus.Interface(s, 'org.PulseAudio.Core1.Stream')
+            interface.Move(widget.getsink())
 
     def action2(self, widget, data=None):
         print 'action2: %s', widget
