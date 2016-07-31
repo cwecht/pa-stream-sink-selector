@@ -59,7 +59,10 @@ class AppIndicatorExample:
                 appindicator.CATEGORY_APPLICATION_STATUS)
         self.ind.set_status(appindicator.STATUS_ACTIVE)
         self.ind.set_attention_icon('indicator-messages-new')
-        self.ind.set_icon(gtk.STOCK_INFO)
+        icon_path = os.path.abspath(os.path.dirname(__file__) + '/icon.svg');
+        if not os.path.isfile(icon_path):
+          icon_path = gtk.STOCK_INFO
+        self.ind.set_icon(icon_path)
         try:
             self.conn = self.connect()
             self.core = \
